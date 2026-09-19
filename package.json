@@ -22,13 +22,17 @@
     "@capacitor/ios": "^8.3.4",
     "@iconify-json/lucide": "^1.2.108",
     "@iconify-json/simple-icons": "^1.2.83",
+    "@internationalized/date": "^3.12.4",
     "@nuxt/hints": "1.1.2",
     "@nuxt/ui": "^4.7.1",
     "@nuxtjs/device": "4.0.0",
+    "@pinia/nuxt": "1.0.1",
     "@vite-pwa/nuxt": "1.1.1",
     "@vueuse/nuxt": "14.3.0",
     "nuxt": "^4.4.6",
-    "tailwindcss": "^4.3.0"
+    "pinia": "^4.0.2",
+    "tailwindcss": "^4.3.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.4",

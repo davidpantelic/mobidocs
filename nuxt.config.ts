@@ -10,10 +10,11 @@ export default defineNuxtConfig({
     "@nuxt/hints",
     "@vueuse/nuxt",
     "@nuxtjs/device",
+    "@pinia/nuxt",
   ],
 
   devtools: {
-    enabled: true,
+    enabled: false,
   },
 
   devServer: {
@@ -28,8 +29,8 @@ export default defineNuxtConfig({
     disable: isCapacitor,
     registerType: "autoUpdate",
     manifest: {
-      name: "Webdak Nuxt PWA",
-      short_name: "WebdakNuxtPWA",
+      name: "Webdak Biz",
+      short_name: "Webdak Biz",
       description: "Nuxt4 PWA template",
       theme_color: "#334155",
       id: "/",
@@ -69,7 +70,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: "sr" },
-      title: "Webdak Nuxt PWA",
+      title: "Webdak Biz",
       meta: [
         {
           name: "viewport",
@@ -77,10 +78,10 @@ export default defineNuxtConfig({
         },
         { name: "description", content: "Nuxt4 PWA template" },
         { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: "Webdak Nuxt PWA" },
+        { name: "twitter:title", content: "Webdak Biz" },
         { name: "twitter:description", content: "Nuxt4 PWA template" },
         { name: "twitter:image", content: "/pwa-512x512.png" },
-        { property: "og:title", content: "Webdak Nuxt PWA" },
+        { property: "og:title", content: "Webdak Biz" },
         { property: "og:description", content: "Nuxt4 PWA template" },
         { property: "og:image", content: "/pwa-512x512.png" },
       ],
@@ -99,7 +100,12 @@ export default defineNuxtConfig({
 
   vite: {
     optimizeDeps: {
-      include: ["@vue/devtools-core", "@vue/devtools-kit", "workbox-window"],
+      include: [
+        "@vue/devtools-core",
+        "@vue/devtools-kit",
+        "workbox-window",
+        "zod",
+      ],
     },
   },
 
