@@ -24,7 +24,7 @@ function formatDate(value: string) {
   <div class="mx-auto w-full max-w-5xl">
     <UiPageHeader title="Dokumenti" icon="i-lucide-file" />
 
-    <div class="mb-4 flex justify-end">
+    <div v-if="!!invoices.length" class="mb-4 flex justify-end">
       <UButton label="Nova faktura" icon="i-lucide-plus" to="/invoices/new" />
     </div>
 
