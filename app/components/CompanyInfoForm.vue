@@ -7,10 +7,16 @@ import {
   type CompanyType,
   type VatStatus,
 } from "@/schemas/company";
+import { useCompanyStore } from "@/stores/company";
 
 const toast = useToast();
+const companyStore = useCompanyStore();
 const props = defineProps<{
   onboarding: boolean;
+}>();
+
+const emit = defineEmits<{
+  saved: [company: CompanyFormData];
 }>();
 
 type SelectOption<T extends string> = {
@@ -30,28 +36,19 @@ const companyTypeOptions: SelectOption<CompanyType>[] = [
 ];
 
 const state = reactive<CompanyFormState>({
-  name: "",
-  shortName: "",
-  address: "",
-  place: "",
-  postalCode: "",
-  email: "",
-  phone: "",
-  pib: "",
-  vatStatus: "vatOn",
-  companyType: undefined,
-  bankAccount: "",
-  mb: "",
+  ...companyStore.company,
 });
 
 const submitAttempted = ref(false);
 
 async function onSubmit(event: FormSubmitEvent<CompanyFormData>) {
   submitAttempted.value = true;
+  companyStore.updateCompany(event.data);
+  emit("saved", event.data);
   toast.add({
-    title: "Success",
-    description: "The form has been submitted.",
+    title: "Podaci firme su sačuvani.",
     color: "success",
+    duration: 2000,
   });
   console.log(event.data);
 }

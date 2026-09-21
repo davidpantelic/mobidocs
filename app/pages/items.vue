@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import { storeToRefs } from "pinia";
 import type {
   CatalogItemFormData,
   CatalogItemType,
 } from "@/schemas/catalog-item";
+import {
+  useCatalogItemsStore,
+  type CatalogItem,
+} from "@/stores/catalogItems";
 
-type CatalogItemListItem = CatalogItemFormData & { id: string };
+type CatalogItemListItem = CatalogItem;
 type CatalogItemFilter = CatalogItemType | "all";
 type CatalogItemSort = "name-asc" | "name-desc" | "price-asc" | "price-desc";
 
@@ -21,6 +26,8 @@ const selectedSort = ref<CatalogItemSort>("name-asc");
 const editingItem = ref<CatalogItemListItem>();
 const itemPendingDeletion = ref<CatalogItemListItem>();
 const toast = useToast();
+const catalogItemsStore = useCatalogItemsStore();
+const { catalogItems } = storeToRefs(catalogItemsStore);
 
 const typeOptions: SelectOption<CatalogItemFilter>[] = [
   { label: "Sve stavke", value: "all" },
@@ -39,51 +46,6 @@ const nameCollator = new Intl.Collator("sr-Latn-RS", {
   sensitivity: "base",
   numeric: true,
 });
-
-const catalogItems = ref<CatalogItemListItem[]>([
-  {
-    id: "item_1",
-    type: "service",
-    name: "Krečenje",
-    description: "Krečenje unutrašnjih zidova po kvadratnom metru.",
-    unit: "usluga",
-    price: 3000,
-  },
-  {
-    id: "item_2",
-    type: "product",
-    name: "Kancelarijska stolica sa podesivim naslonom",
-    description:
-      "Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napom!",
-    unit: "kom",
-    price: 434500,
-  },
-  {
-    id: "item_3",
-    type: "service",
-    name: "Konsultacije",
-    description: "Stručne poslovne konsultacije.",
-    unit: "sat",
-    price: 6000,
-  },
-  {
-    id: "item_4",
-    type: "service",
-    name: "Programiranje",
-    description: "Stručno poslovno programiranje.",
-    unit: "sat",
-    price: 6000,
-  },
-  {
-    id: "item_5",
-    type: "product",
-    name: "Plasticni vertikalni rezervoar za pijacu vodu",
-    description:
-      "Plasticni vertikalni rezervoar za pijacu vodu dugotrajan i povoljan. Pogodan za domaćinstva i proizvodnje!",
-    unit: "kom",
-    price: 3026000,
-  },
-]);
 
 function normalizeSearchValue(value: string) {
   return value
@@ -149,21 +111,9 @@ function openEditForm(item: CatalogItemListItem) {
 
 function saveItem(data: CatalogItemFormData) {
   if (editingItem.value) {
-    const index = catalogItems.value.findIndex(
-      (item) => item.id === editingItem.value?.id,
-    );
-
-    if (index !== -1) {
-      catalogItems.value[index] = {
-        ...data,
-        id: editingItem.value.id,
-      };
-    }
+    catalogItemsStore.updateCatalogItem(editingItem.value.id, data);
   } else {
-    catalogItems.value.push({
-      ...data,
-      id: `item_${Date.now()}`,
-    });
+    catalogItemsStore.addCatalogItem(data);
   }
 
   itemFormDisplayed.value = false;
@@ -185,9 +135,7 @@ function deleteItem() {
   }
 
   const deletedItem = itemPendingDeletion.value;
-  catalogItems.value = catalogItems.value.filter(
-    (item) => item.id !== deletedItem.id,
-  );
+  catalogItemsStore.deleteCatalogItem(deletedItem.id);
   deleteModalDisplayed.value = false;
   itemPendingDeletion.value = undefined;
 

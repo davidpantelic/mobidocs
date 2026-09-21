@@ -68,8 +68,8 @@ const items = computed<NavigationMenuItem[]>(() => [
   {
     label: "Moja firma",
     icon: "i-lucide-building-2",
-    active: route.path.startsWith("/sdf"),
-    to: "/",
+    active: route.path.startsWith("/company"),
+    to: "/company",
   },
   {
     label: "Postavke",

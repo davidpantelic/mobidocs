@@ -1,10 +1,14 @@
 <script lang="ts" setup>
+import { storeToRefs } from "pinia";
 import type { ClientFormData, ClientType } from "@/schemas/client";
+import { useClientsStore, type Client } from "@/stores/clients";
 
 const clientFormDisplayed = ref(false);
 const deleteModalDisplayed = ref(false);
 const searchQuery = ref("");
 const toast = useToast();
+const clientsStore = useClientsStore();
+const { clients } = storeToRefs(clientsStore);
 
 type ClientFilter = ClientType | "all";
 type ClientFilterOption = {
@@ -37,93 +41,10 @@ const clientNameCollator = new Intl.Collator("sr-Latn-RS", {
   numeric: true,
 });
 
-type ClientListItem = ClientFormData & { id: string };
+type ClientListItem = Client;
 
 const editingClient = ref<ClientListItem>();
 const clientPendingDeletion = ref<ClientListItem>();
-
-const clients = ref<ClientListItem[]>([
-  {
-    id: "client_1",
-    type: "company",
-    name: "Webdak Solutions DOO",
-    shortName: "Webdak",
-    address: "Plužac 18",
-    place: "Osečina",
-    postalCode: "14253",
-    email: "davidpantelic1996@gmail.com",
-    phone: "0677204115",
-    pib: "123456789",
-    bankAccount: "123-123123-12",
-    mb: "12345678",
-    contactPerson: "David Pantelic",
-    note: "Klijent napomena ide ovde!",
-  },
-  {
-    id: "client_2",
-    type: "person",
-    name: "David Pantelic",
-    shortName: "",
-    address: "Pluzac 31",
-    place: "Osecina",
-    postalCode: "14253",
-    email: "davidpantelic1996@gmail.com",
-    phone: "0677204115",
-    pib: "",
-    bankAccount: "123-123123-12",
-    mb: "",
-    contactPerson: "",
-    note: "dsfsdfdf",
-  },
-  {
-    id: "client_3",
-    type: "company",
-    name: "Redak Solutions DOOWebdak Solutions DOOWebdak Solutions DOO",
-    shortName: "RedakWebdak Solutions DOO",
-    address: "Plužac 18Plužac 18Plužac 18",
-    place: "OsečinaOsečina Osečina",
-    postalCode: "14253",
-    email: "davidpanteliOsečinaOsečinac1996@gmail.com",
-    phone: "0677204115",
-    pib: "123456789",
-    bankAccount: "123-123123-12",
-    mb: "12345678",
-    contactPerson: "David PantelicOsečina",
-    note: "Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napomena ide ovde!Klijent napom!",
-  },
-  {
-    id: "client_4",
-    type: "person",
-    name: "Marko Markovic",
-    shortName: "",
-    address: "Pluzac 31",
-    place: "Osecina",
-    postalCode: "14253",
-    email: "davidpantelic1996@gmail.com",
-    phone: "0677204115",
-    pib: "",
-    bankAccount: "123-123123-12",
-    mb: "",
-    contactPerson: "",
-    note: "dsfsdfdf",
-  },
-  {
-    id: "client_5",
-    type: "person",
-    name: "Stojan",
-    shortName: "",
-    address: "Plu 31",
-    place: "Sabac",
-    postalCode: "15000",
-    email: "dav196@gmail.com",
-    phone: "06772115",
-    pib: "",
-    bankAccount: "123-123123-12",
-    mb: "",
-    contactPerson: "",
-    note: "",
-  },
-]);
 
 function normalizeSearchValue(value: string) {
   return value
@@ -185,21 +106,9 @@ function openEditForm(client: ClientListItem) {
 
 function saveClient(data: ClientFormData) {
   if (editingClient.value) {
-    const index = clients.value.findIndex(
-      (client) => client.id === editingClient.value?.id,
-    );
-
-    if (index !== -1) {
-      clients.value[index] = {
-        ...data,
-        id: editingClient.value.id,
-      };
-    }
+    clientsStore.updateClient(editingClient.value.id, data);
   } else {
-    clients.value.push({
-      ...data,
-      id: `client_${Date.now()}`,
-    });
+    clientsStore.addClient(data);
   }
 
   clientFormDisplayed.value = false;
@@ -217,9 +126,7 @@ function deleteClient() {
   }
 
   const deletedClientName = clientPendingDeletion.value.name;
-  clients.value = clients.value.filter(
-    (client) => client.id !== clientPendingDeletion.value?.id,
-  );
+  clientsStore.deleteClient(clientPendingDeletion.value.id);
   deleteModalDisplayed.value = false;
   clientPendingDeletion.value = undefined;
 

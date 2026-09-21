@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FormErrorEvent, FormSubmitEvent } from "@nuxt/ui";
+import { storeToRefs } from "pinia";
 import {
   getLocalTimeZone,
   parseDate,
@@ -14,43 +15,36 @@ import {
   type InvoiceFormState,
 } from "@/schemas/invoice";
 import type { VatStatus } from "@/schemas/company";
+import { useClientsStore } from "@/stores/clients";
+import { useCatalogItemsStore } from "@/stores/catalogItems";
+import { useCompanyStore } from "@/stores/company";
 
 const toast = useToast();
-const props = withDefaults(
-  defineProps<{
-    onboarding: boolean;
-    vatStatus?: VatStatus;
-  }>(),
-  {
-    vatStatus: "vatOn",
-  },
-);
+const clientsStore = useClientsStore();
+const catalogItemsStore = useCatalogItemsStore();
+const companyStore = useCompanyStore();
+const { clients } = storeToRefs(clientsStore);
+const { catalogItems } = storeToRefs(catalogItemsStore);
+const props = defineProps<{
+  onboarding: boolean;
+  vatStatus?: VatStatus;
+}>();
 
 type SelectOption = {
   label: string;
   value: string;
 };
 
-type CatalogItem = {
-  id: string;
-  label: string;
-  unit: string;
-  price: number;
-};
-
-const clients: SelectOption[] = [
-  { label: "Prvi klijent DOO", value: "client_1" },
-  { label: "Marko Marković", value: "client_2" },
-];
-
-const catalogItems: CatalogItem[] = [
-  { id: "item_1", label: "Krečenje", unit: "usluga", price: 3000 },
-  { id: "item_2", label: "Stolica", unit: "kom", price: 4500 },
-];
+const clientOptions = computed<SelectOption[]>(() =>
+  clients.value.map((client) => ({
+    label: client.shortName || client.name,
+    value: client.id,
+  })),
+);
 
 const itemOptions = computed<SelectOption[]>(() =>
-  catalogItems.map((item) => ({
-    label: `${item.label} (${item.unit})`,
+  catalogItems.value.map((item) => ({
+    label: `${item.name} (${item.unit})`,
     value: item.id,
   })),
 );
@@ -69,13 +63,15 @@ const issueDatePopoverOpen = ref(false);
 const supplyDatePopoverOpen = ref(false);
 const dueDatePopoverOpen = ref(false);
 
-const isVatRegistered = computed(() => props.vatStatus === "vatOn");
+const isVatRegistered = computed(
+  () => (props.vatStatus ?? companyStore.company.vatStatus) === "vatOn",
+);
 
 function createInvoiceItem(): InvoiceItemFormState {
   return {
-    itemId: catalogItems[0]?.id ?? "",
+    itemId: catalogItems.value[0]?.id ?? "",
     quantity: "1",
-    price: String(catalogItems[0]?.price ?? ""),
+    price: String(catalogItems.value[0]?.price ?? ""),
     taxRate: isVatRegistered.value ? "20" : "0",
   };
 }
@@ -85,7 +81,7 @@ const state = reactive<InvoiceFormState>({
   issueDate: currentDate.toString(),
   supplyDate: currentDate.toString(),
   dueDate: currentDate.add({ days: 7 }).toString(),
-  clientId: clients[0]?.value ?? "",
+  clientId: clients.value[0]?.id ?? "",
   items: [createInvoiceItem()],
   note: "",
 });
@@ -118,11 +114,11 @@ const supplyDateModel = computed<DateValue | undefined>({
 });
 
 const selectedClient = computed(() =>
-  clients.find((client) => client.value === state.clientId),
+  clients.value.find((client) => client.id === state.clientId),
 );
 
 function getCatalogItem(itemId: string) {
-  return catalogItems.find((item) => item.id === itemId);
+  return catalogItems.value.find((item) => item.id === itemId);
 }
 
 function parseAmount(value: string) {
@@ -387,7 +383,11 @@ async function onError(event: FormErrorEvent) {
       </div>
 
       <UFormField label="Klijent" name="clientId" eager-validation required>
-        <USelect v-model="state.clientId" :items="clients" class="w-full" />
+        <USelect
+          v-model="state.clientId"
+          :items="clientOptions"
+          class="w-full"
+        />
       </UFormField>
 
       <div class="space-y-3">
@@ -517,7 +517,11 @@ async function onError(event: FormErrorEvent) {
         <div class="flex items-center justify-between gap-4">
           <span class="text-sm text-muted">Klijent</span>
           <span class="text-sm text-highlighted text-right">
-            {{ selectedClient?.label || "Nije izabran" }}
+            {{
+              selectedClient?.shortName ||
+              selectedClient?.name ||
+              "Nije izabran"
+            }}
           </span>
         </div>
 
