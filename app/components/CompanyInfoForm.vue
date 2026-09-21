@@ -34,6 +34,7 @@ const state = reactive<CompanyFormState>({
   shortName: "",
   address: "",
   place: "",
+  postalCode: "",
   email: "",
   phone: "",
   pib: "",
@@ -87,6 +88,22 @@ async function onError(event: FormErrorEvent) {
 
       <UFormField label="Grad/Mesto" name="place" eager-validation required>
         <UInput v-model="state.place" class="w-full" placeholder="Osečina" />
+      </UFormField>
+
+      <UFormField
+        label="Poštanski broj"
+        name="postalCode"
+        :eager-validation="submitAttempted"
+        :hint="state.postalCode.length + '/5'"
+        required
+      >
+        <UInput
+          v-model="state.postalCode"
+          class="w-full"
+          inputmode="numeric"
+          maxlength="5"
+          placeholder="14253"
+        />
       </UFormField>
 
       <UFormField

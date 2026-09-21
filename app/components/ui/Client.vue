@@ -53,7 +53,7 @@ const phoneHref = computed(() =>
 );
 
 const googleMapsHref = computed(() => {
-  const address = `${props.client.address}, ${props.client.place}`;
+  const address = `${props.client.address}, ${props.client.postalCode} ${props.client.place}`;
 
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 });
@@ -181,7 +181,7 @@ function toggleDetails() {
         <span
           class="truncate min-w-0 wrap-break-word underline decoration-primary/50 underline-offset-4 group-hover:decoration-primary"
         >
-          {{ client.address }}, {{ client.place }}
+          {{ client.address }}, {{ client.postalCode }} {{ client.place }}
           <UIcon
             name="i-lucide-external-link"
             class="mt-0.5 size-3.5 shrink-0"

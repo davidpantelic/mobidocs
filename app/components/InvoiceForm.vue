@@ -10,13 +10,21 @@ import {
   invoiceSchema,
   parseDecimal,
   type InvoiceFormData,
+  type InvoiceItemFormState,
   type InvoiceFormState,
 } from "@/schemas/invoice";
+import type { VatStatus } from "@/schemas/company";
 
 const toast = useToast();
-const props = defineProps<{
-  onboarding: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    onboarding: boolean;
+    vatStatus?: VatStatus;
+  }>(),
+  {
+    vatStatus: "vatOn",
+  },
+);
 
 type SelectOption = {
   label: string;
@@ -29,8 +37,6 @@ type CatalogItem = {
   unit: string;
   price: number;
 };
-
-const vatStatus = ref(false);
 
 const clients: SelectOption[] = [
   { label: "Prvi klijent DOO", value: "client_1" },
@@ -50,7 +56,6 @@ const itemOptions = computed<SelectOption[]>(() =>
 );
 
 const taxRateOptions: SelectOption[] = [
-  { label: "Bez PDV-a", value: "0" },
   { label: "10%", value: "10" },
   { label: "20%", value: "20" },
 ];
@@ -58,19 +63,30 @@ const taxRateOptions: SelectOption[] = [
 const currentDate = today(getLocalTimeZone());
 
 const inputDate = useTemplateRef("inputDate");
+const supplyDateInput = useTemplateRef("supplyDateInput");
 const dueDateInput = useTemplateRef("dueDateInput");
 const issueDatePopoverOpen = ref(false);
+const supplyDatePopoverOpen = ref(false);
 const dueDatePopoverOpen = ref(false);
+
+const isVatRegistered = computed(() => props.vatStatus === "vatOn");
+
+function createInvoiceItem(): InvoiceItemFormState {
+  return {
+    itemId: catalogItems[0]?.id ?? "",
+    quantity: "1",
+    price: String(catalogItems[0]?.price ?? ""),
+    taxRate: isVatRegistered.value ? "20" : "0",
+  };
+}
 
 const state = reactive<InvoiceFormState>({
   invoiceNumber: `001/${currentDate.year}`,
   issueDate: currentDate.toString(),
+  supplyDate: currentDate.toString(),
   dueDate: currentDate.add({ days: 7 }).toString(),
   clientId: clients[0]?.value ?? "",
-  itemId: catalogItems[0]?.id ?? "",
-  quantity: "1",
-  price: String(catalogItems[0]?.price ?? ""),
-  taxRate: vatStatus.value ? "20" : "0",
+  items: [createInvoiceItem()],
   note: "",
 });
 
@@ -92,31 +108,73 @@ const dueDateModel = computed<DateValue | undefined>({
   },
 });
 
+const supplyDateModel = computed<DateValue | undefined>({
+  get: () => (state.supplyDate ? parseDate(state.supplyDate) : undefined),
+  set: (value) => {
+    if (value) {
+      state.supplyDate = value.toString();
+    }
+  },
+});
+
 const selectedClient = computed(() =>
   clients.find((client) => client.value === state.clientId),
 );
 
-const selectedItem = computed(() =>
-  catalogItems.find((item) => item.id === state.itemId),
+function getCatalogItem(itemId: string) {
+  return catalogItems.find((item) => item.id === itemId);
+}
+
+function parseAmount(value: string) {
+  const amount = parseDecimal(value || "0");
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function getItemSubtotal(item: InvoiceItemFormState) {
+  return parseAmount(item.quantity) * parseAmount(item.price);
+}
+
+function getItemTax(item: InvoiceItemFormState) {
+  return (getItemSubtotal(item) * Number(item.taxRate)) / 100;
+}
+
+function updateItemPrice(index: number, itemId: string) {
+  const catalogItem = getCatalogItem(itemId);
+  const invoiceItem = state.items[index];
+
+  if (catalogItem && invoiceItem) {
+    invoiceItem.price = String(catalogItem.price);
+  }
+}
+
+function addItem() {
+  state.items.push(createInvoiceItem());
+}
+
+function removeItem(index: number) {
+  if (state.items.length > 1) {
+    state.items.splice(index, 1);
+  }
+}
+
+watch(isVatRegistered, (registered) => {
+  for (const item of state.items) {
+    item.taxRate = registered ? "20" : "0";
+  }
+});
+
+const subtotal = computed(() =>
+  state.items.reduce((sum, item) => sum + getItemSubtotal(item), 0),
 );
-
-watch(
-  () => state.itemId,
-  () => {
-    if (!selectedItem.value) {
-      return;
-    }
-
-    state.price = String(selectedItem.value.price);
-  },
+const taxAmount = computed(() =>
+  state.items.reduce((sum, item) => sum + getItemTax(item), 0),
 );
-
-const quantity = computed(() => parseDecimal(state.quantity || "0"));
-const unitPrice = computed(() => parseDecimal(state.price || "0"));
-const taxRate = computed(() => Number(state.taxRate));
-const subtotal = computed(() => quantity.value * unitPrice.value);
-const taxAmount = computed(() => (subtotal.value * taxRate.value) / 100);
 const total = computed(() => subtotal.value + taxAmount.value);
+const vatNote = computed(() =>
+  isVatRegistered.value
+    ? ""
+    : "PDV nije obračunat jer izdavalac nije u sistemu PDV-a.",
+);
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat("sr-Latn-RS", {
@@ -141,6 +199,7 @@ async function onSubmit(event: FormSubmitEvent<InvoiceFormData>) {
 
   console.log("Invoice data", {
     ...event.data,
+    vatNote: vatNote.value || undefined,
     subtotal: subtotal.value,
     taxAmount: taxAmount.value,
     total: total.value,
@@ -154,7 +213,7 @@ async function onError(event: FormErrorEvent) {
 </script>
 
 <template>
-  <UPageCard class="w-full max-w-md mx-auto">
+  <UPageCard class="w-full max-w-2xl mx-auto">
     <UForm
       :schema="invoiceSchema"
       :state="state"
@@ -229,101 +288,221 @@ async function onError(event: FormErrorEvent) {
         </UFormField>
       </div>
 
-      <UFormField
-        label="Rok plaćanja"
-        name="dueDate"
-        :eager-validation="submitAttempted"
-        required
-      >
-        <UInputDate
-          ref="dueDateInput"
-          v-model="dueDateModel"
-          :range="false"
-          :min-value="issueDateModel"
-          locale="sr-Latn-RS"
-          readonly
-          class="w-full [&>div]:w-auto!"
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <UFormField
+          label="Datum prometa"
+          name="supplyDate"
+          :eager-validation="submitAttempted"
+          required
         >
-          <template #trailing>
-            <UPopover
-              v-model:open="dueDatePopoverOpen"
-              :reference="dueDateInput?.inputsRef[3]?.$el"
-              :content="{
-                align: 'start',
-                side: 'bottom',
-              }"
-            >
-              <UButton
-                color="neutral"
-                variant="link"
-                size="sm"
-                icon="i-lucide-calendar"
-                aria-label="Izaberi rok plaćanja"
-                class="px-0"
-              />
-
-              <template #content>
-                <LazyUCalendar
-                  v-model="dueDateModel"
-                  :range="false"
-                  :multiple="false"
-                  :min-value="issueDateModel"
-                  prevent-deselect
-                  class="p-2"
-                  @update:model-value="dueDatePopoverOpen = false"
+          <UInputDate
+            ref="supplyDateInput"
+            v-model="supplyDateModel"
+            :range="false"
+            locale="sr-Latn-RS"
+            readonly
+            class="w-full [&>div]:w-auto!"
+          >
+            <template #trailing>
+              <UPopover
+                v-model:open="supplyDatePopoverOpen"
+                :reference="supplyDateInput?.inputsRef[3]?.$el"
+                :content="{
+                  align: 'start',
+                  side: 'bottom',
+                }"
+              >
+                <UButton
+                  color="neutral"
+                  variant="link"
+                  size="sm"
+                  icon="i-lucide-calendar"
+                  aria-label="Izaberi datum prometa"
+                  class="px-0"
                 />
-              </template>
-            </UPopover>
-          </template>
-        </UInputDate>
-      </UFormField>
+
+                <template #content>
+                  <LazyUCalendar
+                    v-model="supplyDateModel"
+                    :range="false"
+                    :multiple="false"
+                    prevent-deselect
+                    class="p-2"
+                    @update:model-value="supplyDatePopoverOpen = false"
+                  />
+                </template>
+              </UPopover>
+            </template>
+          </UInputDate>
+        </UFormField>
+
+        <UFormField
+          label="Rok plaćanja"
+          name="dueDate"
+          :eager-validation="submitAttempted"
+          required
+        >
+          <UInputDate
+            ref="dueDateInput"
+            v-model="dueDateModel"
+            :range="false"
+            :min-value="issueDateModel"
+            locale="sr-Latn-RS"
+            readonly
+            class="w-full [&>div]:w-auto!"
+          >
+            <template #trailing>
+              <UPopover
+                v-model:open="dueDatePopoverOpen"
+                :reference="dueDateInput?.inputsRef[3]?.$el"
+                :content="{
+                  align: 'start',
+                  side: 'bottom',
+                }"
+              >
+                <UButton
+                  color="neutral"
+                  variant="link"
+                  size="sm"
+                  icon="i-lucide-calendar"
+                  aria-label="Izaberi rok plaćanja"
+                  class="px-0"
+                />
+
+                <template #content>
+                  <LazyUCalendar
+                    v-model="dueDateModel"
+                    :range="false"
+                    :multiple="false"
+                    :min-value="issueDateModel"
+                    prevent-deselect
+                    class="p-2"
+                    @update:model-value="dueDatePopoverOpen = false"
+                  />
+                </template>
+              </UPopover>
+            </template>
+          </UInputDate>
+        </UFormField>
+      </div>
 
       <UFormField label="Klijent" name="clientId" eager-validation required>
         <USelect v-model="state.clientId" :items="clients" class="w-full" />
       </UFormField>
 
-      <UFormField
-        label="Proizvod ili usluga"
-        name="itemId"
-        eager-validation
-        required
-      >
-        <USelect v-model="state.itemId" :items="itemOptions" class="w-full" />
-      </UFormField>
+      <div class="space-y-3">
+        <h2 class="font-medium">Stavke fakture</h2>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <UFormField label="Količina" name="quantity" eager-validation required>
-          <UInput
-            v-model="state.quantity"
-            class="w-full"
-            inputmode="decimal"
-            placeholder="1"
-          />
-        </UFormField>
+        <div
+          v-for="(item, index) in state.items"
+          :key="index"
+          class="rounded-md border border-default p-4 space-y-4"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-sm font-medium">Stavka {{ index + 1 }}</span>
+            <UButton
+              type="button"
+              color="error"
+              variant="ghost"
+              size="sm"
+              icon="i-lucide-trash-2"
+              :class="
+                state.items.length === 1
+                  ? 'cursor-not-allowed!'
+                  : 'cursor-pointer'
+              "
+              :disabled="state.items.length === 1"
+              :aria-label="`Obriši stavku ${index + 1}`"
+              @click="removeItem(index)"
+            />
+          </div>
 
-        <UFormField label="Cena" name="price" eager-validation required>
-          <UInput
-            v-model="state.price"
-            class="w-full"
-            inputmode="decimal"
-            placeholder="3000"
-          />
-        </UFormField>
+          <UFormField
+            label="Proizvod ili usluga"
+            :name="`items.${index}.itemId`"
+            eager-validation
+            required
+          >
+            <USelect
+              v-model="item.itemId"
+              :items="itemOptions"
+              class="w-full"
+              @update:model-value="updateItemPrice(index, $event)"
+            />
+          </UFormField>
+
+          <div
+            class="grid grid-cols-1 gap-4"
+            :class="isVatRegistered ? 'sm:grid-cols-3' : 'sm:grid-cols-2'"
+          >
+            <UFormField
+              label="Količina"
+              :name="`items.${index}.quantity`"
+              eager-validation
+              required
+            >
+              <UInput
+                v-model="item.quantity"
+                class="w-full"
+                inputmode="decimal"
+                placeholder="1"
+              />
+            </UFormField>
+
+            <UFormField
+              label="Cena"
+              :name="`items.${index}.price`"
+              eager-validation
+              required
+            >
+              <UInput
+                v-model="item.price"
+                class="w-full"
+                inputmode="decimal"
+                placeholder="3000"
+              />
+            </UFormField>
+
+            <UFormField
+              v-if="isVatRegistered"
+              label="PDV"
+              :name="`items.${index}.taxRate`"
+              eager-validation
+              required
+            >
+              <USelect
+                v-model="item.taxRate"
+                :items="taxRateOptions"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
+
+          <div class="flex justify-end gap-4 text-sm">
+            <span class="text-muted">Ukupno za stavku</span>
+            <span class="font-medium text-highlighted">
+              {{ formatMoney(getItemSubtotal(item) + getItemTax(item)) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <UButton
+            type="button"
+            color="neutral"
+            variant="soft"
+            size="sm"
+            icon="i-lucide-plus"
+            @click="addItem"
+          >
+            Dodaj stavku
+          </UButton>
+        </div>
+
+        <p v-if="!isVatRegistered" class="text-sm text-muted">
+          {{ vatNote }}
+        </p>
       </div>
-
-      <UFormField
-        v-if="!props.onboarding"
-        label="PDV"
-        name="taxRate"
-        eager-validation
-        required
-      >
-        <USelect
-          v-model="state.taxRate"
-          :items="taxRateOptions"
-          class="w-full"
-        />
-      </UFormField>
 
       <UFormField label="Napomena" name="note" eager-validation>
         <UTextarea
@@ -343,9 +522,9 @@ async function onError(event: FormErrorEvent) {
         </div>
 
         <div class="flex items-center justify-between gap-4">
-          <span class="text-sm text-muted">Stavka</span>
+          <span class="text-sm text-muted">Broj stavki</span>
           <span class="text-sm text-highlighted text-right">
-            {{ selectedItem?.label || "Nije izabrana" }}
+            {{ state.items.length }}
           </span>
         </div>
 
@@ -358,10 +537,7 @@ async function onError(event: FormErrorEvent) {
           }}</span>
         </div>
 
-        <div
-          v-if="!props.onboarding"
-          class="flex items-center justify-between gap-4"
-        >
+        <div class="flex items-center justify-between gap-4">
           <span class="text-sm text-muted">PDV</span>
           <span class="text-sm text-highlighted">{{
             formatMoney(taxAmount)

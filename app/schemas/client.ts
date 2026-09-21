@@ -26,6 +26,11 @@ export const clientSchema = z
       .trim()
       .min(1, "Grad/mesto klijenta je obavezno")
       .max(20, "Grad/mesto može sadržati maksimalno 20 karaktera"),
+    postalCode: z
+      .string()
+      .trim()
+      .min(1, "Poštanski broj je obavezan")
+      .regex(/^\d{5}$/, "Poštanski broj mora imati tačno 5 cifara"),
     email: z
       .email("Ispravan email je obavezan")
       .max(50, "Email može sadržati maksimalno 50 karaktera")
