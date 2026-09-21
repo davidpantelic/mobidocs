@@ -104,6 +104,13 @@ function openEditForm(client: ClientListItem) {
   clientFormDisplayed.value = true;
 }
 
+function createInvoice(client: ClientListItem) {
+  navigateTo({
+    path: "/invoices/new",
+    query: { clientId: client.id },
+  });
+}
+
 function saveClient(data: ClientFormData) {
   if (editingClient.value) {
     clientsStore.updateClient(editingClient.value.id, data);
@@ -207,6 +214,7 @@ const closeDeleteModal = () => {
         v-for="item in sortedClients"
         :key="item.id"
         :client="item"
+        @create-invoice="createInvoice(item)"
         @edit="openEditForm(item)"
         @delete="openDeleteModal(item)"
       />

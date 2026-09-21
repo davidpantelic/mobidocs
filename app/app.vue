@@ -38,8 +38,8 @@ const items = computed<NavigationMenuItem[]>(() => [
   {
     label: "Dokumenti",
     icon: "i-lucide-file",
-    active: route.path.startsWith("/sdf"),
-    to: "/",
+    active: route.path.startsWith("/invoices"),
+    to: "/invoices",
   },
   {
     label: "Klijenti",

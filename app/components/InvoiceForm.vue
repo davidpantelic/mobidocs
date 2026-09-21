@@ -28,6 +28,13 @@ const { catalogItems } = storeToRefs(catalogItemsStore);
 const props = defineProps<{
   onboarding: boolean;
   vatStatus?: VatStatus;
+  initialClientId?: string;
+  initialItemId?: string;
+  initialInvoiceNumber?: string;
+}>();
+
+const emit = defineEmits<{
+  saved: [invoice: InvoiceFormData];
 }>();
 
 type SelectOption = {
@@ -67,22 +74,35 @@ const isVatRegistered = computed(
   () => (props.vatStatus ?? companyStore.company.vatStatus) === "vatOn",
 );
 
-function createInvoiceItem(): InvoiceItemFormState {
+const initialClientId = clientsStore.getClientById(props.initialClientId ?? "")
+  ? props.initialClientId
+  : clients.value[0]?.id;
+
+const initialItemId = catalogItemsStore.getCatalogItemById(
+  props.initialItemId ?? "",
+)
+  ? props.initialItemId
+  : catalogItems.value[0]?.id;
+
+function createInvoiceItem(itemId = catalogItems.value[0]?.id ?? ""): InvoiceItemFormState {
+  const catalogItem = catalogItemsStore.getCatalogItemById(itemId);
+
   return {
-    itemId: catalogItems.value[0]?.id ?? "",
+    itemId: catalogItem?.id ?? "",
     quantity: "1",
-    price: String(catalogItems.value[0]?.price ?? ""),
+    price: String(catalogItem?.price ?? ""),
     taxRate: isVatRegistered.value ? "20" : "0",
   };
 }
 
 const state = reactive<InvoiceFormState>({
-  invoiceNumber: `001/${currentDate.year}`,
+  invoiceNumber:
+    props.initialInvoiceNumber ?? `001/${currentDate.year}`,
   issueDate: currentDate.toString(),
   supplyDate: currentDate.toString(),
   dueDate: currentDate.add({ days: 7 }).toString(),
-  clientId: clients.value[0]?.id ?? "",
-  items: [createInvoiceItem()],
+  clientId: initialClientId ?? "",
+  items: [createInvoiceItem(initialItemId)],
   note: "",
 });
 
@@ -184,6 +204,7 @@ const submitAttempted = ref(false);
 
 async function onSubmit(event: FormSubmitEvent<InvoiceFormData>) {
   submitAttempted.value = true;
+  emit("saved", event.data);
 
   toast.add({
     title: props.onboarding

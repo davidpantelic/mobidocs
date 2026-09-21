@@ -7,24 +7,34 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  createInvoice: [];
   edit: [];
   delete: [];
 }>();
 
 const isMobile = useIsMobile();
 
-const actionItems: DropdownMenuItem[] = [
-  {
-    label: "Izmeni",
-    icon: "i-lucide-pencil",
-    onSelect: () => emit("edit"),
-  },
-  {
-    label: "Obriši",
-    icon: "i-lucide-trash-2",
-    color: "error",
-    onSelect: () => emit("delete"),
-  },
+const actionItems: DropdownMenuItem[][] = [
+  [
+    {
+      label: "Kreiraj fakturu",
+      icon: "i-lucide-file",
+      onSelect: () => emit("createInvoice"),
+    },
+  ],
+  [
+    {
+      label: "Izmeni",
+      icon: "i-lucide-pencil",
+      onSelect: () => emit("edit"),
+    },
+    {
+      label: "Obriši",
+      icon: "i-lucide-trash-2",
+      color: "error",
+      onSelect: () => emit("delete"),
+    },
+  ],
 ];
 
 const unitLabels: Record<UnitValue, string> = {

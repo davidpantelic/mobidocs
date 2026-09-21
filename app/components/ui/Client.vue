@@ -7,6 +7,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  createInvoice: [];
   edit: [];
   delete: [];
 }>();
@@ -20,7 +21,7 @@ const actionItems: DropdownMenuItem[][] = [
     {
       label: "Kreiraj fakturu",
       icon: "i-lucide-file",
-      // onSelect: () => emit("edit"),
+      onSelect: () => emit("createInvoice"),
     },
   ],
   [

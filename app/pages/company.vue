@@ -50,7 +50,7 @@ function closeEditModal() {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-4xl text-left">
+  <div class="mx-auto w-full max-w-4xl text-left select-text">
     <UiPageHeader title="Moja firma" icon="i-lucide-building-2" />
 
     <div class="mb-4 flex items-start justify-between gap-4">

@@ -109,6 +109,13 @@ function openEditForm(item: CatalogItemListItem) {
   itemFormDisplayed.value = true;
 }
 
+function createInvoice(item: CatalogItemListItem) {
+  navigateTo({
+    path: "/invoices/new",
+    query: { itemId: item.id },
+  });
+}
+
 function saveItem(data: CatalogItemFormData) {
   if (editingItem.value) {
     catalogItemsStore.updateCatalogItem(editingItem.value.id, data);
@@ -215,6 +222,7 @@ function deleteItem() {
         :key="item.id"
         :item="item"
         class="self-stretch"
+        @create-invoice="createInvoice(item)"
         @edit="openEditForm(item)"
         @delete="openDeleteModal(item)"
       />
