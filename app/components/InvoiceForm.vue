@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import * as z from "zod";
 import type { FormErrorEvent, FormSubmitEvent } from "@nuxt/ui";
 import {
   getLocalTimeZone,
@@ -7,6 +6,12 @@ import {
   today,
   type DateValue,
 } from "@internationalized/date";
+import {
+  invoiceSchema,
+  parseDecimal,
+  type InvoiceFormData,
+  type InvoiceFormState,
+} from "@/schemas/invoice";
 
 const toast = useToast();
 const props = defineProps<{
@@ -50,10 +55,6 @@ const taxRateOptions: SelectOption[] = [
   { label: "20%", value: "20" },
 ];
 
-function parseDecimal(value: string) {
-  return Number(value.replace(",", "."));
-}
-
 const currentDate = today(getLocalTimeZone());
 
 const inputDate = useTemplateRef("inputDate");
@@ -61,60 +62,7 @@ const dueDateInput = useTemplateRef("dueDateInput");
 const issueDatePopoverOpen = ref(false);
 const dueDatePopoverOpen = ref(false);
 
-const schema = z
-  .object({
-    invoiceNumber: z
-      .string()
-      .trim()
-      .min(1, "Broj fakture je obavezan")
-      .max(30, "Broj fakture može sadržati maksimalno 30 karaktera"),
-    issueDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Datum izdavanja je obavezan"),
-    dueDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Rok plaćanja je obavezan"),
-    clientId: z.string().min(1, "Klijent je obavezan"),
-    itemId: z.string().min(1, "Proizvod ili usluga su obavezni"),
-    quantity: z
-      .string()
-      .trim()
-      .min(1, "Količina je obavezna")
-      .regex(/^\d+([,.]\d{1,2})?$/, "Količina mora biti broj, npr. 1 ili 1,50")
-      .transform(parseDecimal)
-      .pipe(z.number().positive("Količina mora biti veća od 0")),
-    price: z
-      .string()
-      .trim()
-      .min(1, "Cena je obavezna")
-      .regex(
-        /^\d+([,.]\d{1,2})?$/,
-        "Cena mora biti broj, npr. 3000 ili 3000,50",
-      )
-      .transform(parseDecimal)
-      .pipe(z.number().positive("Cena mora biti veća od 0")),
-    taxRate: z.enum(["0", "10", "20"]).transform(Number),
-    note: z
-      .string()
-      .trim()
-      .max(300, "Napomena može sadržati maksimalno 300 karaktera")
-      .optional()
-      .or(z.literal("")),
-  })
-  .superRefine((data, ctx) => {
-    if (new Date(data.dueDate) < new Date(data.issueDate)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["dueDate"],
-        message: "Rok plaćanja ne može biti pre datuma izdavanja",
-      });
-    }
-  });
-
-type State = z.input<typeof schema>;
-type Schema = z.output<typeof schema>;
-
-const state = reactive<State>({
+const state = reactive<InvoiceFormState>({
   invoiceNumber: `001/${currentDate.year}`,
   issueDate: currentDate.toString(),
   dueDate: currentDate.add({ days: 7 }).toString(),
@@ -180,7 +128,7 @@ function formatMoney(value: number) {
 
 const submitAttempted = ref(false);
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+async function onSubmit(event: FormSubmitEvent<InvoiceFormData>) {
   submitAttempted.value = true;
 
   toast.add({
@@ -206,12 +154,9 @@ async function onError(event: FormErrorEvent) {
 </script>
 
 <template>
-  <p class="max-w-sm mx-auto mb-8 text-center text-pretty">
-    Sada vrlo lako možete napraviti svoju prvu fakturu!
-  </p>
   <UPageCard class="w-full max-w-md mx-auto">
     <UForm
-      :schema="schema"
+      :schema="invoiceSchema"
       :state="state"
       class="space-y-4"
       :validate-on-input-delay="0"
@@ -254,6 +199,10 @@ async function onError(event: FormErrorEvent) {
               <UPopover
                 v-model:open="issueDatePopoverOpen"
                 :reference="inputDate?.inputsRef[3]?.$el"
+                :content="{
+                  align: 'start',
+                  side: 'bottom',
+                }"
               >
                 <UButton
                   color="neutral"
@@ -299,6 +248,10 @@ async function onError(event: FormErrorEvent) {
             <UPopover
               v-model:open="dueDatePopoverOpen"
               :reference="dueDateInput?.inputsRef[3]?.$el"
+              :content="{
+                align: 'start',
+                side: 'bottom',
+              }"
             >
               <UButton
                 color="neutral"

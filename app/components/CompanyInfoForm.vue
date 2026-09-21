@@ -1,84 +1,35 @@
 <script setup lang="ts">
-import * as z from "zod";
 import type { FormErrorEvent, FormSubmitEvent } from "@nuxt/ui";
+import {
+  companySchema,
+  type CompanyFormData,
+  type CompanyFormState,
+  type CompanyType,
+  type VatStatus,
+} from "@/schemas/company";
 
 const toast = useToast();
 const props = defineProps<{
   onboarding: boolean;
 }>();
 
-type SelectOption = {
+type SelectOption<T extends string> = {
   label: string;
-  value: string;
+  value: T;
 };
 
-const vatStatusOptions: SelectOption[] = [
+const vatStatusOptions: SelectOption<VatStatus>[] = [
   { label: "U sistemu PDV-a", value: "vatOn" },
   { label: "Nije u sistemu PDV-a", value: "vatOff" },
 ];
 
-const companyTypeOptions: SelectOption[] = [
+const companyTypeOptions: SelectOption<CompanyType>[] = [
   { label: "DOO", value: "doo" },
   { label: "Preduzetnik", value: "pr" },
   { label: "Ostalo", value: "other" },
 ];
 
-const schema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Ime firme je obavezan")
-    .max(150, "Ime može sadržati maksimalno 150 karaktera"),
-  shortName: z
-    .string()
-    .trim()
-    .max(50, "Skraćeno ime može sadržati maksimalno 50 karaktera")
-    .optional()
-    .or(z.literal("")),
-  address: z
-    .string()
-    .trim()
-    .max(50, "Adresa može sadržati maksimalno 50 karaktera")
-    .min(1, "Adresa firme je obavezna"),
-  place: z
-    .string()
-    .trim()
-    .max(20, "Grad/mesto može sadržati maksimalno 20 karaktera")
-    .min(1, "Grad/mesto firme je obavezno"),
-  email: z
-    .email("Ispravan email je obavezan")
-    .max(50, "Email može sadržati maksimalno 50 karaktera")
-    .optional()
-    .or(z.literal("")),
-  phone: z
-    .string()
-    .trim()
-    .max(15, "Broj telefona može sadržati maksimalno 15 karaktera")
-    .optional()
-    .or(z.literal("")),
-  pib: z
-    .string()
-    .trim()
-    .min(1, "PIB firme je obavezan")
-    .regex(/^\d{9}$/, "PIB mora imati tačno 9 cifara"),
-  vatStatus: z.enum(["vatOn", "vatOff"]),
-  companyType: z.enum(["doo", "pr", "other"]).optional().or(z.literal("")),
-  bankAccount: z
-    .string()
-    .trim()
-    .min(1, "Broj računa je obavezan")
-    .regex(/^\d{3}-\d{1,13}-\d{2}$/, "Broj računa nije u ispravnom formatu"),
-  mb: z
-    .string()
-    .trim()
-    .regex(/^\d{8}$/, "Matični broj mora imati tačno 8 cifara")
-    .optional()
-    .or(z.literal("")),
-});
-
-type Schema = z.output<typeof schema>;
-
-const state = reactive<Partial<Schema>>({
+const state = reactive<CompanyFormState>({
   name: "",
   shortName: "",
   address: "",
@@ -87,14 +38,14 @@ const state = reactive<Partial<Schema>>({
   phone: "",
   pib: "",
   vatStatus: "vatOn",
-  companyType: props.onboarding ? "" : "doo",
+  companyType: undefined,
   bankAccount: "",
   mb: "",
 });
 
 const submitAttempted = ref(false);
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+async function onSubmit(event: FormSubmitEvent<CompanyFormData>) {
   submitAttempted.value = true;
   toast.add({
     title: "Success",
@@ -112,13 +63,9 @@ async function onError(event: FormErrorEvent) {
 </script>
 
 <template>
-  <p class="max-w-xl mx-auto mb-8 text-center text-pretty">
-    Unesite podatke svoje firme, obavezna polja su neophodna kako bi vaši
-    dokumenti bili validni. Kasnije možete dodati ili izmeniti podatke.
-  </p>
   <UPageCard class="w-full max-w-md mx-auto">
     <UForm
-      :schema="schema"
+      :schema="companySchema"
       :state="state"
       class="space-y-4"
       :validate-on-input-delay="0"
@@ -189,7 +136,7 @@ async function onError(event: FormErrorEvent) {
       <UFormField
         v-if="!props.onboarding"
         label="Tip subjekta"
-        name="mb"
+        name="companyType"
         :eager-validation="submitAttempted"
       >
         <URadioGroup

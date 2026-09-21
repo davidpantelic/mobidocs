@@ -11,10 +11,7 @@ const dateTimeMobile = useDateFormat(useNow(), "ddd DD.MM.YY. HH:mm", {
   locales: "sr-Latn-RS",
 });
 
-const { isMobileOrTablet } = useDevice();
-const isDesktop = useMediaQuery("(min-width: 1024px)", {
-  ssrWidth: isMobileOrTablet ? 0 : 1024,
-});
+const isDesktop = useIsDesktop();
 
 const sidebarOpen = ref(isDesktop.value);
 
@@ -39,6 +36,12 @@ const items = computed<NavigationMenuItem[]>(() => [
     to: "/",
   },
   {
+    label: "Dokumenti",
+    icon: "i-lucide-file",
+    active: route.path.startsWith("/sdf"),
+    to: "/",
+  },
+  {
     label: "Klijenti",
     icon: "i-lucide-users",
     active: route.path.startsWith("/clients"),
@@ -51,20 +54,14 @@ const items = computed<NavigationMenuItem[]>(() => [
     },
   },
   {
-    label: "Proizvodi/Usluge",
+    label: "Proizvodi i usluge",
     icon: "i-lucide-package",
-    active: route.path.startsWith("/sdf"),
-    to: "/",
+    active: route.path.startsWith("/items"),
+    to: "/items",
   },
   {
     label: "Zaposleni",
     icon: "gravity-ui:person-worker",
-    active: route.path.startsWith("/sdf"),
-    to: "/",
-  },
-  {
-    label: "Dokumenti",
-    icon: "i-lucide-file",
     active: route.path.startsWith("/sdf"),
     to: "/",
   },
@@ -212,8 +209,10 @@ const userItems = computed<DropdownMenuItem[][]>(() => [
             :items="userItems"
             :content="{ align: 'center', collisionPadding: 12 }"
             :ui="{
-              content: 'w-(--reka-dropdown-menu-trigger-width) min-w-48',
-              item: 'items-center',
+              content:
+                'w-(--reka-dropdown-menu-trigger-width) min-w-48 transition-none',
+              item: 'items-center transition-none before:transition-none',
+              itemLeadingIcon: 'transition-none',
             }"
           >
             <UButton
@@ -301,7 +300,7 @@ const userItems = computed<DropdownMenuItem[][]>(() => [
           class="flex max-h-[calc(100vh-var(--ui-header-height))] flex-1 flex-col items-center justify-center"
         >
           <NuxtPage
-            class="overflow-y-auto w-full h-full scrollbar-gutter-stable pl-4 pr-2 py-4 sm:py-8 sm:pl-8 sm:pr-6"
+            class="overflow-y-auto w-full h-full scrollbar-gutter-both px-3 py-4 sm:py-8"
           />
         </UMain>
       </div>

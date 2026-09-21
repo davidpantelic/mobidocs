@@ -87,18 +87,33 @@ const onboardingStepItems = computed<StepperItem[]>(() => [
       }"
     >
       <template #company>
+        <p class="max-w-xl mx-auto mb-8 text-center text-pretty">
+          Unesite podatke svoje firme, obavezna polja su neophodna kako bi vaši
+          dokumenti bili validni. Kasnije možete dodati ili izmeniti podatke.
+        </p>
         <LazyCompanyInfoForm :onboarding="false" />
       </template>
 
       <template #product>
+        <p class="max-w-sm mx-auto mb-8 text-center text-pretty">
+          Dodajte svoju prvu uslugu ili proizvod. Kasnije možete dodati jos ili
+          izmeniti postojeće.
+        </p>
         <LazyProductServiceForm :onboarding="false" />
       </template>
 
       <template #client>
+        <p class="max-w-md mx-auto mb-8 text-center text-pretty">
+          Dodajte svog prvog klijenta kao pravno ili fizičko lice. Kasnije
+          možete dodati jos ili izmeniti postojeće.
+        </p>
         <LazyClientForm :onboarding="false" />
       </template>
 
       <template #invoice>
+        <p class="max-w-sm mx-auto mb-8 text-center text-pretty">
+          Sada vrlo lako možete napraviti svoju prvu fakturu!
+        </p>
         <LazyInvoiceForm :onboarding="false" />
       </template>
     </LazyUStepper>

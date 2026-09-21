@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import * as z from "zod";
 import type { FormErrorEvent, FormSubmitEvent } from "@nuxt/ui";
+import {
+  catalogItemSchema,
+  type CatalogItemFormData,
+  type CatalogItemFormState,
+  type CatalogItemType,
+} from "@/schemas/catalog-item";
 
 const toast = useToast();
 const props = defineProps<{
   onboarding: boolean;
+  item?: CatalogItemFormData;
 }>();
 
-const catalogItemTypes = ["service", "product"] as const;
+const emit = defineEmits<{
+  saved: [item: CatalogItemFormData];
+}>();
 
-type CatalogItemType = (typeof catalogItemTypes)[number];
 type CatalogItemOption = {
   label: string;
   id: CatalogItemType;
@@ -46,55 +53,12 @@ const unitOptions = computed(() => {
   ];
 });
 
-const unitValues = [
-  "usluga",
-  "sat",
-  "dan",
-  "mesec",
-  "pausal",
-  "kom",
-  "kg",
-  "l",
-  "m",
-  "paket",
-] as const;
-
-const schema = z.object({
-  type: z.enum(catalogItemTypes),
-  name: z
-    .string()
-    .trim()
-    .min(1, "Naziv je obavezan")
-    .max(100, "Naziv može sadržati maksimalno 100 karaktera"),
-  description: z
-    .string()
-    .trim()
-    .max(300, "Opis može sadržati maksimalno 300 karaktera")
-    .optional(),
-  unit: z.enum(unitValues, "Jedinica mere je obavezna"),
-  price: z
-    .string()
-    .trim()
-    .min(1, "Cena je obavezna")
-    .regex(/^\d+([,.]\d{1,2})?$/, "Cena mora biti broj, npr. 3000 ili 3000,50")
-    .transform((value) => Number(value.replace(",", ".")))
-    .pipe(
-      z
-        .number()
-        .positive("Cena mora biti veća od 0")
-        .max(999999999, "Cena je prevelika"),
-    ),
-});
-
-type State = z.input<typeof schema>;
-type Schema = z.output<typeof schema>;
-
-const state = reactive<State>({
-  type: "service",
-  name: "",
-  description: "",
-  unit: "usluga",
-  price: "",
+const state = reactive<CatalogItemFormState>({
+  type: props.item?.type ?? "service",
+  name: props.item?.name ?? "",
+  description: props.item?.description ?? "",
+  unit: props.item?.unit ?? "usluga",
+  price: props.item ? String(props.item.price) : "",
 });
 
 watch(
@@ -110,14 +74,16 @@ const catalogItemLabel = computed(() =>
 
 const submitAttempted = ref(false);
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+async function onSubmit(event: FormSubmitEvent<CatalogItemFormData>) {
   submitAttempted.value = true;
   toast.add({
-    title: `Vaš${state.type == "service" ? "a" : ""} ${catalogItemLabel.value} je sačuvan${state.type == "service" ? "a" : ""}.`,
-    // description: "The form has been submitted.",
+    title: props.item
+      ? `${state.type === "service" ? "Usluga" : "Proizvod"} je izmenjen${state.type === "service" ? "a" : ""}.`
+      : `Vaš${state.type === "service" ? "a" : ""} ${catalogItemLabel.value} je sačuvan${state.type === "service" ? "a" : ""}.`,
     color: "success",
     duration: 2000,
   });
+  emit("saved", event.data);
   console.log(event.data);
 }
 
@@ -129,12 +95,9 @@ async function onError(event: FormErrorEvent) {
 </script>
 
 <template>
-  <p class="max-w-sm mx-auto mb-8 text-center text-pretty">
-    Dodajte svoju prvu uslugu ili proizvod. Kasnije možete dodati jos ili
-    izmeniti postojeće.
-  </p>
   <UPageCard class="w-full max-w-md mx-auto">
     <URadioGroup
+      v-if="!props.item"
       v-model="state.type"
       value-key="id"
       :items="catalogItems"
@@ -145,7 +108,7 @@ async function onError(event: FormErrorEvent) {
       class="w-full mb-3 [&>fieldset>label]:grow [&>fieldset>label]:hover:cursor-pointer"
     />
     <UForm
-      :schema="schema"
+      :schema="catalogItemSchema"
       :state="state"
       class="space-y-4"
       :validate-on-input-delay="0"
